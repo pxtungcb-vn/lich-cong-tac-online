@@ -1,0 +1,25 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Lich cong tac theo tung tuan - ai cung xem duoc, chi nguoi da dang nhap
+    // (tai khoan do quan tri vien tao thu cong trong Firebase Authentication)
+    // moi duoc sua.
+    match /weeks/{weekId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // Danh sach 4 chuc danh Thuong truc Tinh uy - ai cung xem duoc, chi
+    // nguoi da dang nhap moi duoc sua.
+    match /settings/{docId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // Mac dinh: chan tat ca nhung gi khong khop cac quy tac tren.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
