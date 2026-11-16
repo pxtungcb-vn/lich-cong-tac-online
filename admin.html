@@ -48,8 +48,24 @@
         <button class="btn" id="thisWeekBtn">Về tuần này</button>
         <button class="btn" id="copyPrevBtn">Sao chép nội dung từ tuần trước</button>
         <button class="btn ghost" id="seedSampleBtn">Nạp dữ liệu mẫu (Tuần 47/2026)</button>
+        <button class="btn ghost" id="toggleImportBtn">Nhập dữ liệu từ file Word/PDF ▾</button>
         <button class="btn ghost" id="toggleLeadersBtn">Sửa danh sách 4 chức danh ▾</button>
         <button class="btn ghost" id="toggleAccountsBtn">Quản lý tài khoản đăng nhập ▾</button>
+      </div>
+
+      <div class="card" id="importPanel" style="display:none;">
+        <h3>Nhập dữ liệu từ file Word (.docx) hoặc PDF</h3>
+        <p class="hint">
+          Chọn file "THÔNG BÁO lịch công tác của Thường trực Tỉnh uỷ" đúng mẫu đang dùng
+          (file Word hoặc file PDF). Hệ thống sẽ tự động đọc và điền vào các ô bên dưới —
+          bạn xem lại, chỉnh sửa nếu cần rồi bấm "Lưu lịch công tác tuần này" như bình thường.
+          Dữ liệu sẽ được điền vào <strong>tuần đang mở hiện tại</strong> (hoặc tự chuyển sang
+          đúng tuần nếu file có ghi rõ ngày).
+        </p>
+        <p class="hint">Khuyến nghị dùng file <strong>Word (.docx)</strong> nếu có — độ chính xác cao hơn file PDF.</p>
+        <input type="file" id="importFileInput" accept=".docx,.pdf" />
+        <button class="btn primary" id="importFileBtn">Đọc và điền dữ liệu từ file</button>
+        <div id="importStatus"></div>
       </div>
 
       <div class="card" id="leadersPanel" style="display:none;">
