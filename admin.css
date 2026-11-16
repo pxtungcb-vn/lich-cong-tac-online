@@ -154,3 +154,62 @@ input:focus, textarea:focus {
   color: #1e7a34;
   border: 1px solid #c6ead0;
 }
+
+.accounts-subhead {
+  margin-top: 22px;
+  padding-top: 16px;
+  border-top: 1px dashed var(--border);
+  font-size: 15px;
+  color: var(--red-dark);
+}
+
+.account-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.account-row:last-child {
+  border-bottom: none;
+}
+
+.account-row.disabled {
+  opacity: 0.55;
+}
+
+.account-name {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.account-meta {
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  margin-top: 2px;
+}
+
+.role-badge {
+  display: inline-block;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 999px;
+  margin-left: 6px;
+  background: #eef3fb;
+  color: #2f5aa8;
+}
+
+.role-badge.superadmin {
+  background: #fdeee0;
+  color: #b4600a;
+}
+
+.role-badge.disabled-badge {
+  background: #fde8e8;
+  color: #a4181f;
+}
