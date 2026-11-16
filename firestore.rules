@@ -2,22 +2,52 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Lich cong tac theo tung tuan - ai cung xem duoc, chi nguoi da dang nhap
-    // (tai khoan do quan tri vien tao thu cong trong Firebase Authentication)
-    // moi duoc sua.
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function accountDoc() {
+      return get(/databases/$(database)/documents/accounts/$(request.auth.uid));
+    }
+
+    function isActiveAccount() {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/accounts/$(request.auth.uid)) &&
+        accountDoc().data.disabled != true;
+    }
+
+    function isSuperAdmin() {
+      return isActiveAccount() && accountDoc().data.role == 'superadmin';
+    }
+
+    // Lịch công tác theo từng tuần — ai cũng xem được, chỉ tài khoản
+    // đã được cấp quyền (có trong accounts/ và chưa bị vô hiệu hóa) mới được sửa.
     match /weeks/{weekId} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if isActiveAccount();
     }
 
-    // Danh sach 4 chuc danh Thuong truc Tinh uy - ai cung xem duoc, chi
-    // nguoi da dang nhap moi duoc sua.
+    // Danh sách 4 chức danh Thường trực Tỉnh uỷ — ai cũng xem được, chỉ
+    // tài khoản đã được cấp quyền mới được sửa.
     match /settings/{docId} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if isActiveAccount();
     }
 
-    // Mac dinh: chan tat ca nhung gi khong khop cac quy tac tren.
+    // Hồ sơ tài khoản đăng nhập (họ tên, chức vụ, vai trò, trạng thái).
+    // Mọi tài khoản đã đăng nhập đều xem được danh sách và được thêm
+    // tài khoản mới (vai trò editor). Chỉ superadmin được sửa (vô hiệu
+    // hóa / kích hoạt lại, đổi vai trò). Không ai được xoá hẳn document.
+    match /accounts/{uid} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn()
+        && request.resource.data.disabled == false
+        && (request.resource.data.role == 'editor' || isSuperAdmin());
+      allow update: if isSuperAdmin();
+      allow delete: if false;
+    }
+
+    // Mặc định: chặn tất cả những gì không khớp các quy tắc trên.
     match /{document=**} {
       allow read, write: if false;
     }
