@@ -49,12 +49,31 @@
         <button class="btn" id="copyPrevBtn">Sao chép nội dung từ tuần trước</button>
         <button class="btn ghost" id="seedSampleBtn">Nạp dữ liệu mẫu (Tuần 47/2026)</button>
         <button class="btn ghost" id="toggleLeadersBtn">Sửa danh sách 4 chức danh ▾</button>
+        <button class="btn ghost" id="toggleAccountsBtn">Quản lý tài khoản đăng nhập ▾</button>
       </div>
 
       <div class="card" id="leadersPanel" style="display:none;">
         <h3>Danh sách 4 chức danh (áp dụng cho mọi tuần)</h3>
         <div id="leadersForm"></div>
         <button class="btn primary" id="saveLeadersBtn">Lưu danh sách chức danh</button>
+      </div>
+
+      <div class="card" id="accountsPanel" style="display:none;">
+        <h3>Quản lý tài khoản đăng nhập</h3>
+        <p class="hint">Mọi tài khoản đã được cấp quyền đều có thể thêm tài khoản mới. Chỉ quản trị cấp cao mới có quyền vô hiệu hóa tài khoản.</p>
+        <div id="accountsStatus"></div>
+        <div id="accountsList"></div>
+
+        <h3 class="accounts-subhead">Thêm tài khoản mới</h3>
+        <label>Họ và tên</label>
+        <input type="text" id="newAccName" placeholder="VD: Nguyễn Văn A" />
+        <label>Chức vụ</label>
+        <input type="text" id="newAccPosition" placeholder="VD: Chuyên viên Văn phòng Tỉnh uỷ" />
+        <label>Email đăng nhập</label>
+        <input type="email" id="newAccEmail" placeholder="ten@example.com" />
+        <label>Mật khẩu</label>
+        <input type="password" id="newAccPassword" placeholder="Tối thiểu 6 ký tự" />
+        <button class="btn primary wide" id="addAccountBtn">+ Thêm tài khoản</button>
       </div>
 
       <div id="daysEditor"></div>
