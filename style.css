@@ -418,6 +418,7 @@ table.official-table {
   width: 100%;
   min-width: 760px;
   border-collapse: collapse;
+  table-layout: fixed;
   font-size: 13.5px;
   font-family: "Times New Roman", Times, serif;
   color: #000;
@@ -430,6 +431,17 @@ table.official-table td {
   padding: 8px 10px;
   vertical-align: top;
   text-align: left;
+  overflow-wrap: break-word;
+}
+
+table.official-table th:first-child,
+table.official-table td:first-child {
+  width: 90px;
+}
+
+table.official-table th:not(:first-child),
+table.official-table td:not(:first-child) {
+  width: calc((100% - 90px) / 4);
 }
 
 table.official-table thead th {
