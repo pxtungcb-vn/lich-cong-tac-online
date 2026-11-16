@@ -33,6 +33,7 @@ import {
   buildEmptyWeek,
 } from "./shared.js";
 import { DEFAULT_LEADERS, firebaseConfig } from "./firebase-config.js";
+import { parseScheduleFile } from "./import-schedule.js";
 
 const els = {
   loginView: document.getElementById("loginView"),
@@ -50,6 +51,11 @@ const els = {
   thisBtn: document.getElementById("thisWeekBtn"),
   copyPrevBtn: document.getElementById("copyPrevBtn"),
   seedSampleBtn: document.getElementById("seedSampleBtn"),
+  toggleImportBtn: document.getElementById("toggleImportBtn"),
+  importPanel: document.getElementById("importPanel"),
+  importFileInput: document.getElementById("importFileInput"),
+  importFileBtn: document.getElementById("importFileBtn"),
+  importStatus: document.getElementById("importStatus"),
   toggleLeadersBtn: document.getElementById("toggleLeadersBtn"),
   leadersPanel: document.getElementById("leadersPanel"),
   leadersForm: document.getElementById("leadersForm"),
@@ -82,7 +88,6 @@ function banner(el, msg, type) {
   if (!msg) { el.innerHTML = ""; return; }
   el.innerHTML = `<div class="status-banner ${type}">${escapeHtml(msg)}</div>`;
 }
-
 // ---------------- Đăng nhập / đăng xuất ----------------
 
 els.loginBtn.addEventListener("click", async () => {
@@ -195,7 +200,6 @@ els.saveLeadersBtn.addEventListener("click", async () => {
     banner(els.saveStatus, "Lỗi khi lưu danh sách chức danh: " + e.message, "error");
   }
 });
-
 // ---------------- Quản lý tài khoản đăng nhập ----------------
 
 els.toggleAccountsBtn.addEventListener("click", () => {
@@ -312,7 +316,6 @@ els.addAccountBtn.addEventListener("click", async () => {
     els.addAccountBtn.disabled = false;
   }
 });
-
 // ---------------- Tải / điều hướng tuần ----------------
 
 async function loadWeek(weekId) {
@@ -377,7 +380,6 @@ els.copyPrevBtn.addEventListener("click", async () => {
     banner(els.saveStatus, "Lỗi khi sao chép: " + e.message, "error");
   }
 });
-
 // ---------------- Dữ liệu mẫu (demo nhanh, dựa trên tuần 47/2026) ----------------
 
 const SAMPLE_WEEK_SESSIONS = [
@@ -443,7 +445,115 @@ els.seedSampleBtn.addEventListener("click", () => {
   renderDaysEditor();
   banner(els.saveStatus, "Đã nạp dữ liệu mẫu. Xem thử rồi bấm “Lưu lịch công tác tuần này” để áp dụng.", "success");
 });
+// ---------------- Nhập dữ liệu từ file Word/PDF ----------------
 
+els.toggleImportBtn.addEventListener("click", () => {
+  const show = els.importPanel.style.display === "none";
+  els.importPanel.style.display = show ? "" : "none";
+  els.toggleImportBtn.textContent = show ? "Nhập dữ liệu từ file Word/PDF ▴" : "Nhập dữ liệu từ file Word/PDF ▾";
+});
+
+els.importFileBtn.addEventListener("click", async () => {
+  const file = els.importFileInput.files && els.importFileInput.files[0];
+  if (!file) {
+    banner(els.importStatus, "Vui lòng chọn file Word (.docx) hoặc PDF trước.", "error");
+    return;
+  }
+  els.importFileBtn.disabled = true;
+  banner(els.importStatus, "Đang đọc và phân tích file… (có thể mất vài giây)", "info");
+  try {
+    const result = await parseScheduleFile(file);
+    if (!result.ok) {
+      banner(els.importStatus, result.error || "Không đọc được nội dung file.", "error");
+      return;
+    }
+
+    let targetMonday = weekIdToMonday(currentWeekId);
+
+    if (result.startDateStr) {
+      const m = result.startDateStr.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+      if (m) {
+        const monday = getMonday(new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1])));
+        const weekId = getWeekId(monday);
+        if (weekId !== currentWeekId) {
+          const ok = confirm(
+            `File này là lịch của Tuần ${result.weekNumber || "?"} (từ ngày ${result.startDateStr}), khác với tuần đang mở trên màn hình.\n\n` +
+            `Bấm OK để chuyển sang đúng tuần đó rồi điền dữ liệu (nội dung tuần đó sẽ được tải lại từ Firestore, nội dung chưa lưu trên màn hình hiện tại sẽ mất).\n` +
+            `Bấm Cancel để huỷ và tự điều hướng tuần bằng tay.`
+          );
+          if (!ok) {
+            banner(els.importStatus, "Đã huỷ — chưa điền dữ liệu nào.", "info");
+            return;
+          }
+          await loadWeek(weekId);
+          targetMonday = monday;
+        }
+      }
+    }
+
+    if (!confirm('Điền dữ liệu đọc được từ file vào các ô bên dưới? Nội dung đang soạn trên màn hình (chưa lưu) sẽ bị thay thế. Sau khi xem lại, nhớ bấm "Lưu lịch công tác tuần này" để áp dụng.')) {
+      banner(els.importStatus, "Đã huỷ — chưa điền dữ liệu nào.", "info");
+      return;
+    }
+
+    const newWeek = buildEmptyWeek(targetMonday);
+    const warnings = [...(result.warnings || [])];
+    const unmatchedDays = [];
+
+    (result.days || []).forEach((parsedDay, idx) => {
+      let dayIdx = idx < newWeek.days.length ? idx : -1;
+      if (parsedDay.dm) {
+        const found = newWeek.days.findIndex((d) => {
+          const [, mm, dd] = d.date.split("-").map(Number);
+          return dd === parsedDay.dm.day && mm === parsedDay.dm.month;
+        });
+        if (found >= 0) dayIdx = found;
+      }
+      const day = dayIdx >= 0 ? newWeek.days[dayIdx] : null;
+      if (!day) {
+        unmatchedDays.push(parsedDay.weekday || `dòng ${idx + 1}`);
+        return;
+      }
+      day.sessions.morning = day.sessions.morning || {};
+      day.sessions.afternoon = day.sessions.afternoon || {};
+      leaders.forEach((l, li) => {
+        const s = parsedDay.sessionsByLeader && parsedDay.sessionsByLeader[li];
+        if (!s) return;
+        if (s.morning) day.sessions.morning[l.id] = s.morning;
+        if (s.afternoon) day.sessions.afternoon[l.id] = s.afternoon;
+      });
+    });
+
+    if (unmatchedDays.length) {
+      warnings.push(`Không xác định được vị trí của: ${unmatchedDays.join(", ")} — các ngày này chưa được điền, vui lòng nhập tay.`);
+    }
+
+    if (result.leaderNamesInDoc && result.leaderNamesInDoc.length === 4) {
+      const norm = (s) => String(s || "").normalize("NFC").replace(/^đ\/c\s*/i, "").replace(/\s+/g, " ").trim().toLowerCase();
+      result.leaderNamesInDoc.forEach((nameInDoc, i) => {
+        const configured = leaders[i]?.name || "";
+        if (nameInDoc && configured && norm(configured) !== norm(nameInDoc)) {
+          warnings.push(`Cột ${i + 1} trong file ghi tên "${nameInDoc}", khác với "${configured}" đang cấu hình ở vị trí này — vui lòng kiểm tra thứ tự 4 chức danh.`);
+        }
+      });
+    }
+
+    currentWeekData = newWeek;
+    renderDaysEditor();
+
+    const warnMsg = warnings.length ? " Lưu ý: " + warnings.join(" ") : "";
+    banner(
+      els.importStatus,
+      `Đã điền dữ liệu từ file ${result.source === "docx" ? "Word" : "PDF"} vào các ô bên dưới. Vui lòng xem lại kỹ từng ô, rồi bấm "Lưu lịch công tác tuần này" để áp dụng.${warnMsg}`,
+      warnings.length ? "info" : "success"
+    );
+  } catch (e) {
+    console.error(e);
+    banner(els.importStatus, "Lỗi khi đọc file: " + (e?.message || e), "error");
+  } finally {
+    els.importFileBtn.disabled = false;
+  }
+});
 // ---------------- Soạn / lưu lịch tuần ----------------
 
 function renderDaysEditor() {
