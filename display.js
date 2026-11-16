@@ -18,10 +18,19 @@ const els = {
   tableHeadRow: document.getElementById("tableHeadRow"),
   tableBody: document.getElementById("tableBody"),
   dayCards: document.getElementById("dayCards"),
+  officialWrap: document.getElementById("officialWrap"),
+  officialWeekText: document.getElementById("officialWeekText"),
+  officialHeadRow: document.getElementById("officialHeadRow"),
+  officialBody: document.getElementById("officialBody"),
+  viewCardBtn: document.getElementById("viewCardBtn"),
+  viewOfficialBtn: document.getElementById("viewOfficialBtn"),
   prevBtn: document.getElementById("prevWeekBtn"),
   nextBtn: document.getElementById("nextWeekBtn"),
   thisBtn: document.getElementById("thisWeekBtn"),
 };
+
+const VIEW_MODE_KEY = "lctOnlineViewMode";
+let viewMode = localStorage.getItem(VIEW_MODE_KEY) === "official" ? "official" : "card";
 
 let currentWeekId = getWeekId(new Date());
 let unsubscribeWeek = null;
@@ -114,6 +123,75 @@ function renderWeek(weekData) {
   }).join("");
 }
 
+// ---- chế độ "Dạng bảng Thông báo" (khung văn bản hành chính truyền thống) ----
+
+function renderOfficialHeader() {
+  els.officialHeadRow.innerHTML = `<th style="width:90px;">Thời gian</th>` +
+    leaders.map((l) => `
+      <th>
+        <div class="official-leader-name">${escapeHtml(l.name)}</div>
+        <div class="official-leader-title">${escapeHtml(l.title)}</div>
+      </th>`).join("");
+}
+
+function officialCellHtml(day, leaderId) {
+  const m = (day.sessions?.morning?.[leaderId] || "").trim();
+  const a = (day.sessions?.afternoon?.[leaderId] || "").trim();
+  if (m && a && m === a) {
+    return `<div class="official-line">${escapeHtml(m)}</div>`;
+  }
+  return (
+    `<div class="official-line"><b>Sáng:</b> ${m ? escapeHtml(m) : ""}</div>` +
+    `<div class="official-line"><b>Chiều:</b> ${a ? escapeHtml(a) : ""}</div>`
+  );
+}
+
+function renderOfficialTable(weekData) {
+  renderOfficialHeader();
+  const days = weekData?.days || [];
+  els.officialBody.innerHTML = days.map((day) => {
+    const cells = leaders.map((l) => `<td>${officialCellHtml(day, l.id)}</td>`).join("");
+    return `
+      <tr>
+        <td class="official-day-cell">
+          <div>${day.weekday}</div>
+          <div class="official-d">(${formatDMY(day.date)})</div>
+        </td>
+        ${cells}
+      </tr>`;
+  }).join("");
+}
+
+function updateOfficialHeaderText(weekData, weekId) {
+  if (weekData) {
+    els.officialWeekText.textContent =
+      `(Tuần ${weekData.weekNumber}, từ ngày ${formatDMY(weekData.startDate)} đến ngày ${formatDMY(weekData.endDate)})`;
+  } else {
+    els.officialWeekText.textContent = `(Tuần ${weekId.split("-W")[1]} — chưa có dữ liệu)`;
+  }
+}
+
+function applyViewMode() {
+  const isOfficial = viewMode === "official";
+  els.officialWrap.style.display = isOfficial ? "" : "none";
+  els.tableWrap.style.display = isOfficial ? "none" : "";
+  els.dayCards.style.display = isOfficial ? "none" : "";
+  els.viewCardBtn.classList.toggle("active", !isOfficial);
+  els.viewOfficialBtn.classList.toggle("active", isOfficial);
+}
+
+els.viewCardBtn.addEventListener("click", () => {
+  viewMode = "card";
+  localStorage.setItem(VIEW_MODE_KEY, viewMode);
+  applyViewMode();
+});
+
+els.viewOfficialBtn.addEventListener("click", () => {
+  viewMode = "official";
+  localStorage.setItem(VIEW_MODE_KEY, viewMode);
+  applyViewMode();
+});
+
 function updateWeekRangeLabel(weekData, weekId) {
   if (weekData) {
     els.weekRangeText.textContent =
@@ -131,6 +209,7 @@ function subscribeToWeek(weekId) {
   els.loadingArea.style.display = "";
   els.tableWrap.style.display = "none";
   els.dayCards.style.display = "none";
+  els.officialWrap.style.display = "none";
   showStatus("");
 
   const ref = doc(db, "weeks", weekId);
@@ -138,17 +217,20 @@ function subscribeToWeek(weekId) {
     ref,
     (snap) => {
       els.loadingArea.style.display = "none";
-      els.tableWrap.style.display = "";
-      els.dayCards.style.display = "";
       if (snap.exists()) {
         const data = snap.data();
         updateWeekRangeLabel(data, weekId);
+        updateOfficialHeaderText(data, weekId);
         renderWeek(data);
+        renderOfficialTable(data);
       } else {
         updateWeekRangeLabel(null, weekId);
+        updateOfficialHeaderText(null, weekId);
         renderWeek({ days: [] });
+        renderOfficialTable({ days: [] });
         showStatus("Chưa có lịch công tác cho tuần này.", "info");
       }
+      applyViewMode();
     },
     (err) => {
       els.loadingArea.style.display = "none";
