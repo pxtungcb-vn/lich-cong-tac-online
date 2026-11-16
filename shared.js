@@ -4,7 +4,7 @@
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import {
-  getFirestore,
+  initializeFirestore,
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 import {
   getAuth,
@@ -12,7 +12,12 @@ import {
 import { firebaseConfig } from "./firebase-config.js";
 
 export const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app);
+// Dùng long-polling thay vì kênh streaming (WebChannel) mặc định: một số
+// mạng nội bộ cơ quan / proxy chặn kết nối streaming khiến Firestore báo
+// "client is offline" dù mạng vẫn thông — long-polling tương thích rộng hơn.
+export const db = initializeFirestore(app, {
+  experimentalAutoDetectLongPolling: true,
+});
 export const auth = getAuth(app);
 
 export const WEEKDAY_LABELS = [
