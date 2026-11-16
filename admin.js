@@ -3,7 +3,13 @@
 // ============================================================================
 
 import {
+  initializeApp,
+  deleteApp,
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import {
+  getAuth,
   signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
@@ -11,6 +17,9 @@ import {
   doc,
   getDoc,
   setDoc,
+  updateDoc,
+  collection,
+  getDocs,
   serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 import {
@@ -23,7 +32,7 @@ import {
   weekIdToMonday,
   buildEmptyWeek,
 } from "./shared.js";
-import { DEFAULT_LEADERS } from "./firebase-config.js";
+import { DEFAULT_LEADERS, firebaseConfig } from "./firebase-config.js";
 
 const els = {
   loginView: document.getElementById("loginView"),
@@ -47,11 +56,21 @@ const els = {
   saveLeadersBtn: document.getElementById("saveLeadersBtn"),
   daysEditor: document.getElementById("daysEditor"),
   saveWeekBtn: document.getElementById("saveWeekBtn"),
+  toggleAccountsBtn: document.getElementById("toggleAccountsBtn"),
+  accountsPanel: document.getElementById("accountsPanel"),
+  accountsStatus: document.getElementById("accountsStatus"),
+  accountsList: document.getElementById("accountsList"),
+  newAccName: document.getElementById("newAccName"),
+  newAccPosition: document.getElementById("newAccPosition"),
+  newAccEmail: document.getElementById("newAccEmail"),
+  newAccPassword: document.getElementById("newAccPassword"),
+  addAccountBtn: document.getElementById("addAccountBtn"),
 };
 
 let leaders = DEFAULT_LEADERS;
 let currentWeekId = getWeekId(new Date());
 let currentWeekData = null;
+let currentAccount = null; // { uid, email, displayName, position, role, disabled }
 
 function escapeHtml(s) {
   return String(s ?? "").replace(/[&<>"']/g, (c) => ({
@@ -86,17 +105,48 @@ els.loginBtn.addEventListener("click", async () => {
 
 els.logoutBtn.addEventListener("click", () => signOut(auth));
 
+async function loadCurrentAccount(user) {
+  try {
+    const snap = await getDoc(doc(db, "accounts", user.uid));
+    if (!snap.exists() || snap.data().disabled === true) {
+      banner(
+        els.loginStatus,
+        "Tài khoản của bạn chưa được cấp quyền hoặc đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên.",
+        "error"
+      );
+      currentAccount = null;
+      return false;
+    }
+    currentAccount = { uid: user.uid, email: user.email, ...snap.data() };
+    return true;
+  } catch (e) {
+    console.error(e);
+    banner(els.loginStatus, "Lỗi khi kiểm tra quyền tài khoản: " + e.message, "error");
+    currentAccount = null;
+    return false;
+  }
+}
+
 onAuthStateChanged(auth, async (user) => {
   if (user) {
+    const ok = await loadCurrentAccount(user);
+    if (!ok) {
+      await signOut(auth);
+      return;
+    }
     els.loginView.style.display = "none";
     els.editorView.style.display = "";
-    els.whoEmail.textContent = user.email;
+    els.whoEmail.textContent = currentAccount.displayName
+      ? `${currentAccount.displayName} (${user.email})`
+      : user.email;
     await loadLeaders();
     renderLeadersForm();
     await loadWeek(currentWeekId);
+    await loadAccountsList();
   } else {
     els.loginView.style.display = "";
     els.editorView.style.display = "none";
+    currentAccount = null;
   }
 });
 
@@ -143,6 +193,123 @@ els.saveLeadersBtn.addEventListener("click", async () => {
   } catch (e) {
     console.error(e);
     banner(els.saveStatus, "Lỗi khi lưu danh sách chức danh: " + e.message, "error");
+  }
+});
+
+// ---------------- Quản lý tài khoản đăng nhập ----------------
+
+els.toggleAccountsBtn.addEventListener("click", () => {
+  const show = els.accountsPanel.style.display === "none";
+  els.accountsPanel.style.display = show ? "" : "none";
+  els.toggleAccountsBtn.textContent = show ? "Quản lý tài khoản đăng nhập ▴" : "Quản lý tài khoản đăng nhập ▾";
+  if (show) loadAccountsList();
+});
+
+function roleLabel(role) {
+  return role === "superadmin" ? "Quản trị cấp cao" : "Biên tập viên";
+}
+
+async function loadAccountsList() {
+  if (!currentAccount) return;
+  try {
+    const snap = await getDocs(collection(db, "accounts"));
+    const accounts = [];
+    snap.forEach((d) => accounts.push({ uid: d.id, ...d.data() }));
+    accounts.sort((a, b) => {
+      if (a.role !== b.role) return a.role === "superadmin" ? -1 : 1;
+      return (a.displayName || "").localeCompare(b.displayName || "", "vi");
+    });
+    renderAccountsList(accounts);
+  } catch (e) {
+    console.error(e);
+    banner(els.accountsStatus, "Không tải được danh sách tài khoản: " + e.message, "error");
+  }
+}
+
+function renderAccountsList(accounts) {
+  const isSuper = currentAccount?.role === "superadmin";
+  els.accountsList.innerHTML = accounts.map((a) => `
+    <div class="account-row ${a.disabled ? "disabled" : ""}">
+      <div class="account-info">
+        <div class="account-name">${escapeHtml(a.displayName || "(Chưa cập nhật)")} <span class="role-badge ${a.role}">${roleLabel(a.role)}</span>${a.disabled ? ' <span class="role-badge disabled-badge">Đã vô hiệu hóa</span>' : ""}</div>
+        <div class="account-meta">${escapeHtml(a.position || "(Chưa cập nhật chức vụ)")} — ${escapeHtml(a.email || "")}</div>
+      </div>
+      ${isSuper && a.role !== "superadmin" ? `
+        <button class="btn ${a.disabled ? "" : "ghost"}" data-uid="${a.uid}" data-action="${a.disabled ? "enable" : "disable"}">
+          ${a.disabled ? "Kích hoạt lại" : "Vô hiệu hóa"}
+        </button>` : ""}
+    </div>
+  `).join("") || '<p class="hint">Chưa có tài khoản nào.</p>';
+
+  els.accountsList.querySelectorAll("button[data-action]").forEach((btn) => {
+    btn.addEventListener("click", () => onToggleAccountDisabled(btn.dataset.uid, btn.dataset.action === "disable"));
+  });
+}
+
+async function onToggleAccountDisabled(uid, disable) {
+  const msg = disable
+    ? "Vô hiệu hóa tài khoản này? Người này sẽ không thể đăng nhập/cập nhật lịch công tác nữa."
+    : "Kích hoạt lại tài khoản này?";
+  if (!confirm(msg)) return;
+  try {
+    await updateDoc(doc(db, "accounts", uid), { disabled: disable });
+    banner(els.accountsStatus, disable ? "Đã vô hiệu hóa tài khoản." : "Đã kích hoạt lại tài khoản.", "success");
+    await loadAccountsList();
+  } catch (e) {
+    console.error(e);
+    banner(els.accountsStatus, "Lỗi: " + e.message, "error");
+  }
+}
+
+els.addAccountBtn.addEventListener("click", async () => {
+  const displayName = els.newAccName.value.trim();
+  const position = els.newAccPosition.value.trim();
+  const email = els.newAccEmail.value.trim();
+  const password = els.newAccPassword.value;
+
+  if (!displayName || !position || !email || !password) {
+    banner(els.accountsStatus, "Vui lòng nhập đầy đủ Họ và tên, Chức vụ, Email, Mật khẩu.", "error");
+    return;
+  }
+  if (password.length < 6) {
+    banner(els.accountsStatus, "Mật khẩu phải có ít nhất 6 ký tự.", "error");
+    return;
+  }
+
+  els.addAccountBtn.disabled = true;
+  banner(els.accountsStatus, "Đang tạo tài khoản…", "info");
+
+  const secondaryApp = initializeApp(firebaseConfig, "Secondary-" + Date.now());
+  const secondaryAuth = getAuth(secondaryApp);
+  try {
+    const cred = await createUserWithEmailAndPassword(secondaryAuth, email, password);
+    const uid = cred.user.uid;
+    await signOut(secondaryAuth);
+    await setDoc(doc(db, "accounts", uid), {
+      email,
+      displayName,
+      position,
+      role: "editor",
+      disabled: false,
+      createdAt: serverTimestamp(),
+      createdBy: auth.currentUser?.email || "unknown",
+    });
+    banner(els.accountsStatus, `Đã tạo tài khoản cho ${displayName} (${email}).`, "success");
+    els.newAccName.value = "";
+    els.newAccPosition.value = "";
+    els.newAccEmail.value = "";
+    els.newAccPassword.value = "";
+    await loadAccountsList();
+  } catch (e) {
+    console.error(e);
+    let msg = "Lỗi khi tạo tài khoản: " + e.message;
+    if (e.code === "auth/email-already-in-use") msg = "Email này đã có tài khoản.";
+    if (e.code === "auth/invalid-email") msg = "Email không hợp lệ.";
+    if (e.code === "auth/weak-password") msg = "Mật khẩu quá yếu (tối thiểu 6 ký tự).";
+    banner(els.accountsStatus, msg, "error");
+  } finally {
+    try { await deleteApp(secondaryApp); } catch (_) {}
+    els.addAccountBtn.disabled = false;
   }
 });
 
