@@ -32,8 +32,9 @@ Dữ liệu được lưu trên **Firebase** (dịch vụ máy chủ miễn phí
 
 1. Menu bên trái: **Build > Authentication** → **Get started**.
 2. Tab **Sign-in method** → chọn **Email/Password** → **Enable** → **Save**.
-3. Qua tab **Users** → **Add user** → nhập email + mật khẩu cho **từng người** sẽ nhập liệu (ví dụ Lãnh đạo Văn phòng, Thư ký). Có thể thêm bao nhiêu tài khoản cũng được.
-   - *Lưu ý:* đây là nơi **duy nhất** kiểm soát ai được nhập liệu. Ứng dụng không có trang "đăng ký" công khai — chỉ quản trị viên (anh) mới thêm được tài khoản mới tại đây.
+3. Qua tab **Users** → **Add user** → tạo **một tài khoản đầu tiên** (của anh) để đăng nhập vào trang nhập liệu.
+   - *Lưu ý:* từ tài khoản đầu tiên này trở đi, **không cần vào lại Firebase Console nữa** — mọi tài khoản tiếp theo được thêm ngay trong trang nhập liệu (xem mục "Quản lý tài khoản đăng nhập" ở Phần C).
+4. Trong Firestore Database (Bước 2), vào collection `accounts`, tạo 1 document với ID đúng bằng **UID** của tài khoản vừa tạo (xem UID ở tab Users), gồm các trường: `email` (string), `displayName` (string, họ tên), `position` (string, chức vụ), `role` = `"superadmin"` (string), `disabled` = `false` (boolean). Đây là tài khoản quản trị cấp cao duy nhất có quyền vô hiệu hóa tài khoản khác.
 
 ### Bước 4: Lấy thông tin cấu hình (config) để dán vào mã nguồn
 
@@ -73,12 +74,20 @@ Nếu anh muốn tự làm:
 
 ### Người nhập liệu (Lãnh đạo Văn phòng / Thư ký)
 
-1. Mở `admin.html`, đăng nhập bằng email/mật khẩu đã được cấp (Phần A, Bước 3).
+1. Mở `admin.html`, đăng nhập bằng email/mật khẩu đã được cấp (Phần A, Bước 3, hoặc được thêm sau này ngay trong trang — xem mục dưới).
 2. Chọn đúng tuần cần nhập (dùng nút "Tuần trước / Tuần sau / Về tuần này").
 3. Gõ nội dung công tác buổi Sáng / Chiều cho từng người trong Thường trực Tỉnh uỷ, ở từng ngày.
    - Có thể bấm **"Sao chép nội dung từ tuần trước"** nếu tuần mới có nhiều nội dung lặp lại (ví dụ "Làm việc tại cơ quan"), sau đó chỉ cần sửa những phần khác.
 4. Bấm **"💾 Lưu lịch công tác tuần này"**. Mọi người xem lịch sẽ thấy thay đổi ngay lập tức.
 5. Nếu có thay đổi 4 chức danh Thường trực Tỉnh uỷ (do nhân sự thay đổi), bấm **"Sửa danh sách 4 chức danh"** để cập nhật tên/chức vụ — áp dụng cho mọi tuần.
+
+### Quản lý tài khoản đăng nhập (mới)
+
+Ngay trong trang nhập liệu có mục **"Quản lý tài khoản đăng nhập"** để không phải vào Firebase Console nữa:
+
+- **Thêm tài khoản mới:** bất kỳ ai đã đăng nhập (có quyền cập nhật dữ liệu) đều bấm được "+ Thêm tài khoản" — bắt buộc nhập **Họ và tên**, **Chức vụ**, Email, Mật khẩu cho người được cấp tài khoản. Thông tin này hiển thị cùng tài khoản trong danh sách, để biết tài khoản nào là của ai.
+- **Vô hiệu hóa tài khoản:** chỉ tài khoản quản trị cấp cao (superadmin — ban đầu là tài khoản tạo ở Bước 3) mới thấy nút này và mới dùng được. Tài khoản bị vô hiệu hóa sẽ không đăng nhập/cập nhật được lịch nữa, nhưng vẫn hiện trong danh sách (có thể kích hoạt lại).
+- **Lưu ý quan trọng:** vì lý do kỹ thuật (Firebase ở gói miễn phí không cho phép xoá hẳn tài khoản đăng nhập từ phía trình duyệt), "xoá tài khoản" ở đây thực chất là **vô hiệu hóa** — tài khoản mất quyền truy cập ngay lập tức, nhưng bản ghi đăng nhập gốc vẫn còn trong hệ thống Firebase (không ai dùng được). Nếu cần xoá hẳn vĩnh viễn, phải vào Firebase Console > Authentication > Users để xoá thủ công.
 
 ---
 
@@ -87,15 +96,15 @@ Nếu anh muốn tự làm:
 | File | Vai trò |
 |---|---|
 | `index.html`, `display.js` | Trang xem lịch công tác công khai |
-| `admin.html`, `admin.js`, `admin.css` | Trang đăng nhập & nhập liệu |
+| `admin.html`, `admin.js`, `admin.css` | Trang đăng nhập & nhập liệu, gồm cả quản lý tài khoản |
 | `style.css` | Giao diện chung (dùng chung cho cả 2 trang) |
 | `shared.js` | Hàm tính tuần/ngày, kết nối Firebase |
 | `firebase-config.js` | **Cần điền thông tin Firebase của anh vào đây** (Phần A, Bước 4) |
-| `firestore.rules` | Quy tắc phân quyền đọc/ghi dữ liệu — dán vào Firebase Console (Phần A, Bước 2.5) |
+| `firestore.rules` | Quy tắc phân quyền đọc/ghi dữ liệu — dán vào Firebase Console (Phần A, Bước 2.5), gồm cả phân quyền cho collection `accounts` |
 
 ## Xử lý một số tình huống thường gặp
 
 - **Trang xem lịch báo "Không thể tải dữ liệu..."**: kiểm tra lại đã điền đúng `firebase-config.js` chưa, và đã **Publish** Firestore Rules chưa.
-- **Đăng nhập trang nhập liệu báo lỗi**: kiểm tra email/mật khẩu đã được tạo đúng trong Firebase Authentication > Users chưa.
-- **Muốn thêm/xoá người được quyền nhập liệu**: vào Firebase Console > Authentication > Users, thêm hoặc xoá tài khoản — không cần sửa mã nguồn.
+- **Đăng nhập trang nhập liệu báo lỗi**: kiểm tra email/mật khẩu đã được tạo đúng trong Firebase Authentication > Users chưa, và tài khoản có bị vô hiệu hóa trong mục "Quản lý tài khoản đăng nhập" không.
+- **Muốn thêm người được quyền nhập liệu**: dùng mục "Quản lý tài khoản đăng nhập" ngay trong trang nhập liệu — không cần vào Firebase Console, không cần sửa mã nguồn.
 - **Muốn đổi tên 4 chức danh hiển thị**: dùng nút "Sửa danh sách 4 chức danh" ngay trong trang nhập liệu, không cần sửa mã nguồn.
