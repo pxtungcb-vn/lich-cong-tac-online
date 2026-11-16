@@ -8,12 +8,12 @@
 // ============================================================================
 
 export const firebaseConfig = {
-  apiKey: "DIEN_API_KEY_CUA_BAN",
-  authDomain: "TEN_PROJECT.firebaseapp.com",
-  projectId: "TEN_PROJECT",
-  storageBucket: "TEN_PROJECT.appspot.com",
-  messagingSenderId: "DIEN_SENDER_ID",
-  appId: "DIEN_APP_ID",
+  apiKey: "AIzaSyCgBG7PcWnAC13TuvHtLNots4Y7btcc490",
+  authDomain: "lichcongtacldtu.firebaseapp.com",
+  projectId: "lichcongtacldtu",
+  storageBucket: "lichcongtacldtu.firebasestorage.app",
+  messagingSenderId: "140058892465",
+  appId: "1:140058892465:web:9e4dcd0594d65da5b06a90",
 };
 
 // Tên 4 chức danh Thường trực Tỉnh uỷ (có thể sửa trực tiếp trong trang
