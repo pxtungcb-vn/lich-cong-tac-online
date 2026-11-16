@@ -337,3 +337,147 @@ a.admin-link {
 a.admin-link:hover {
   text-decoration: underline;
 }
+
+/* ---------- Chuyển đổi chế độ hiển thị (Dạng thẻ / Dạng bảng Thông báo) ---------- */
+.view-switch {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: -10px 0 26px;
+}
+
+.view-switch-label {
+  font-size: 13px;
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+
+.view-btn {
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--ink-soft);
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.15s ease;
+}
+
+.view-btn:hover:not(.active) {
+  border-color: var(--red);
+  color: var(--red-dark);
+}
+
+.view-btn.active {
+  background: var(--red);
+  color: #fff;
+  border-color: var(--red);
+}
+
+/* ---------- Dạng bảng Thông báo (khung văn bản hành chính truyền thống) ---------- */
+.official-wrap {
+  background: #ffffff;
+  border: 1px solid #000;
+  padding: 18px 18px 26px;
+  margin-bottom: 20px;
+}
+
+.official-header {
+  text-align: center;
+  margin-bottom: 16px;
+  font-family: "Times New Roman", Times, serif;
+  color: #000;
+}
+
+.official-doctitle {
+  font-weight: 700;
+  font-size: 19px;
+  letter-spacing: 0.02em;
+}
+
+.official-docsubtitle {
+  font-weight: 700;
+  font-size: 16px;
+  margin-top: 2px;
+}
+
+.official-docweek {
+  font-style: italic;
+  font-size: 14.5px;
+  margin-top: 2px;
+}
+
+.official-table-scroll {
+  overflow-x: auto;
+}
+
+table.official-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+  font-size: 13.5px;
+  font-family: "Times New Roman", Times, serif;
+  color: #000;
+  background: #fff;
+}
+
+table.official-table th,
+table.official-table td {
+  border: 1px solid #000;
+  padding: 8px 10px;
+  vertical-align: top;
+  text-align: left;
+}
+
+table.official-table thead th {
+  text-align: center;
+  font-weight: 700;
+  background: #fff;
+}
+
+.official-leader-name {
+  font-weight: 700;
+}
+
+.official-leader-title {
+  font-weight: 400;
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+table.official-table td.official-day-cell {
+  text-align: center;
+  font-weight: 700;
+  font-style: italic;
+  white-space: nowrap;
+}
+
+.official-day-cell .official-d {
+  font-weight: 700;
+  font-style: italic;
+}
+
+.official-line {
+  margin-bottom: 4px;
+}
+
+.official-line:last-child {
+  margin-bottom: 0;
+}
+
+.official-line b {
+  font-weight: 700;
+}
+
+@media print {
+  .nav-row,
+  .view-switch,
+  .footer-note,
+  #statusArea,
+  .live-dot {
+    display: none !important;
+  }
+}
