@@ -497,6 +497,7 @@ table.official-table td.official-day-cell {
 }
 
 @media print {
+  .top-actions,
   .nav-row,
   .view-switch,
   .footer-note,
@@ -505,3 +506,10 @@ table.official-table td.official-day-cell {
     display: none !important;
   }
 }
+
+.top-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 4px;
+}
+
