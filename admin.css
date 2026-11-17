@@ -213,3 +213,11 @@ input:focus, textarea:focus {
   background: #fde8e8;
   color: #a4181f;
 }
+
+.toolbar-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
