@@ -47,6 +47,21 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Bộ đếm lượt xem trang công khai — ai cũng xem được số liệu; ai cũng
+    // được ghi (để trang công khai tự tăng số đếm khi có người xem, không
+    // cần đăng nhập), nhưng chỉ được tạo/sửa đúng 2 trường số đếm này,
+    // không được ghi đè bất kỳ dữ liệu nào khác hay xoá tài liệu.
+    match /stats/{statId} {
+      allow read: if true;
+      allow create: if statId == 'viewCounter'
+        && request.resource.data.keys().hasOnly(['totalViews', 'uniqueVisitors'])
+        && request.resource.data.totalViews is int
+        && request.resource.data.uniqueVisitors is int;
+      allow update: if statId == 'viewCounter'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['totalViews', 'uniqueVisitors']);
+      allow delete: if false;
+    }
+
     // Mặc định: chặn tất cả những gì không khớp các quy tắc trên.
     match /{document=**} {
       allow read, write: if false;
