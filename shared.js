@@ -1,10 +1,15 @@
-// ============================================================================
+// ======================================// ============================================================================
 // shared.js — Các hàm & hằng số dùng chung giữa trang hiển thị và trang nhập liệu
 // ============================================================================
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import {
   initializeFirestore,
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  increment,
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 import {
   getAuth,
@@ -133,4 +138,44 @@ export function neighborWeekId(weekId, offsetWeeks) {
   const monday = weekIdToMonday(weekId);
   monday.setDate(monday.getDate() + offsetWeeks * 7);
   return getWeekId(monday);
+}
+
+// --- Bộ đếm lượt xem trang công khai (đơn giản, không thu thập thông tin cá nhân) ---
+
+const VIEW_SEEN_KEY = "lctOnlineViewerSeen_v1";
+
+// Ghi nhận 1 lượt xem trang công khai — gọi 1 lần khi trang index.html tải xong.
+// - totalViews: tăng mỗi lần trang được mở (kể cả tải lại trang).
+// - uniqueVisitors: chỉ tăng ở lần mở đầu tiên trên mỗi trình duyệt (dựa vào một cờ
+//   lưu trong localStorage của trình duyệt đó — không thu thập hay định danh ai).
+export async function recordPageView() {
+  try {
+    const isFirstVisit = !localStorage.getItem(VIEW_SEEN_KEY);
+    if (isFirstVisit) localStorage.setItem(VIEW_SEEN_KEY, "1");
+    const ref = doc(db, "stats", "viewCounter");
+    try {
+      await updateDoc(ref, {
+        totalViews: increment(1),
+        ...(isFirstVisit ? { uniqueVisitors: increment(1) } : {}),
+      });
+    } catch (e) {
+      // Chưa có tài liệu (lượt xem đầu tiên của cả hệ thống) — tạo mới.
+      await setDoc(ref, { totalViews: 1, uniqueVisitors: 1 }, { merge: true });
+    }
+  } catch (e) {
+    console.warn("Không ghi nhận được lượt xem:", e);
+  }
+}
+
+// Đọc số liệu bộ đếm lượt xem — dùng ở trang nhập liệu, mục "Thống kê lượt xem".
+export async function getPageViewStats() {
+  try {
+    const snap = await getDoc(doc(db, "stats", "viewCounter"));
+    if (!snap.exists()) return { totalViews: 0, uniqueVisitors: 0 };
+    const d = snap.data();
+    return { totalViews: d.totalViews || 0, uniqueVisitors: d.uniqueVisitors || 0 };
+  } catch (e) {
+    console.warn("Không đọc được thống kê lượt xem:", e);
+    return null;
+  }
 }
