@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE html><!DOCTYPE html>
 <html lang="vi">
 <head>
 <meta charset="UTF-8" />
@@ -54,6 +54,7 @@
         <button class="btn ghost" id="toggleImportBtn">Nhập dữ liệu từ file Word/PDF ▾</button>
         <button class="btn ghost" id="toggleLeadersBtn">Sửa danh sách 4 chức danh ▾</button>
         <button class="btn ghost" id="toggleAccountsBtn">Quản lý tài khoản đăng nhập ▾</button>
+        <button class="btn ghost" id="toggleStatsBtn">Thống kê lượt xem ▾</button>
       </div>
 
       <div class="card" id="importPanel" style="display:none;">
@@ -93,6 +94,12 @@
         <label>Mật khẩu</label>
         <input type="password" id="newAccPassword" placeholder="Tối thiểu 6 ký tự" />
         <button class="btn primary wide" id="addAccountBtn">+ Thêm tài khoản</button>
+      </div>
+
+      <div class="card" id="statsPanel" style="display:none;">
+        <h3>Thống kê lượt xem trang công khai</h3>
+        <p class="hint">Số liệu ghi nhận từ khi bật tính năng này (không theo dõi danh tính người xem, chỉ đếm số lượt/số trình duyệt).</p>
+        <div id="statsContent">Đang tải…</div>
       </div>
 
       <div id="daysEditor"></div>
