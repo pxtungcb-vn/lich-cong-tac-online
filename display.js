@@ -7,7 +7,7 @@ import {
   getDoc,
   onSnapshot,
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
-import { db, SESSIONS, getWeekId, getMonday, formatDMY, weekIdToMonday } from "./shared.js";
+import { db, SESSIONS, getWeekId, getMonday, formatDMY, weekIdToMonday, recordPageView } from "./shared.js";
 import { DEFAULT_LEADERS } from "./firebase-config.js";
 
 const els = {
@@ -262,6 +262,7 @@ els.thisBtn.addEventListener("click", () => {
 });
 
 (async function init() {
+  recordPageView();
   await loadLeaders();
   subscribeToWeek(currentWeekId);
 })();
