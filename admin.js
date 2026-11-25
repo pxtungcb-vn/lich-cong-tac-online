@@ -337,8 +337,7 @@ async function loadStats() {
     els.statsContent.textContent = "Không tải được số liệu.";
     return;
   }
-  els.statsContent.innerHTML = `
-    <div class="stats-row"><strong>${stats.totalViews.toLocaleString("vi-VN")}</strong> lượt xem trang (tổng số lần trang được mở)</div>
+  els.statsContent.innerHTML = `    <div class="stats-row"><strong>${stats.totalViews.toLocaleString("vi-VN")}</strong> lượt xem trang (tổng số lần trang được mở)</div>
     <div class="stats-row"><strong>${stats.uniqueVisitors.toLocaleString("vi-VN")}</strong> người xem khác nhau (ước tính theo trình duyệt)</div>
   `;
 }
@@ -582,35 +581,70 @@ els.importFileBtn.addEventListener("click", async () => {
 });
 // ---------------- Soạn / lưu lịch tuần ----------------
 
+function autoResizeTextarea(ta) {
+  ta.style.height = "auto";
+  ta.style.height = ta.scrollHeight + "px";
+}
+
 function renderDaysEditor() {
   if (!currentWeekData) return;
-  els.daysEditor.innerHTML = currentWeekData.days.map((day, dayIdx) => {
-    const blocks = leaders.map((l) => {
-      const fields = SESSIONS.map((s) => `
-        <div class="session-field">
-          <label>${s.label}</label>
+  const colCount = leaders.length;
+  const tableMinWidth = 100 + colCount * 190;
+
+  const headerCells = leaders.map((l) => `
+    <th>
+      <span class="editor-leader-name">${escapeHtml(l.name)}</span>
+      <span class="editor-leader-title">${escapeHtml(l.title || "")}</span>
+    </th>
+  `).join("");
+
+  const bodyRows = currentWeekData.days.map((day, dayIdx) => {
+    const cells = leaders.map((l) => {
+      const slots = SESSIONS.map((s) => `
+        <div class="entry-slot">
+          <span class="entry-label">${escapeHtml(s.label)}:</span>
           <textarea
+            class="entry-textarea"
             data-day="${dayIdx}" data-leader="${l.id}" data-session="${s.key}"
-            placeholder="Nội dung ${s.label.toLowerCase()}…"
+            placeholder="Nhập nội dung buổi ${s.label.toLowerCase()}…"
+            rows="1"
           >${escapeHtml(day.sessions?.[s.key]?.[l.id] || "")}</textarea>
         </div>
       `).join("");
-      return `
-        <div class="leader-edit-block">
-          <div class="lname">${escapeHtml(l.name)}</div>
-          <div class="session-pair">${fields}</div>
-        </div>`;
+      return `<td class="editor-entry-cell">${slots}</td>`;
     }).join("");
 
     return `
-      <div class="day-editor-card">
-        <div class="day-editor-head">
-          <span>${day.weekday}</span>
-          <span>${formatDMY(day.date)}</span>
-        </div>
-        ${blocks}
-      </div>`;
+      <tr>
+        <td class="editor-day-cell">
+          <span class="d">${day.weekday}</span>
+          <span class="editor-date">(${formatDMY(day.date)})</span>
+        </td>
+        ${cells}
+      </tr>`;
   }).join("");
+
+  els.daysEditor.innerHTML = `
+    <div class="editor-table-wrap">
+      <table class="editor-table" style="width:100%; min-width:${tableMinWidth}px;">
+        <thead>
+          <tr>
+            <th class="col-time">Thời gian</th>
+            ${headerCells}
+          </tr>
+        </thead>
+        <tbody>
+          ${bodyRows}
+        </tbody>
+      </table>
+    </div>
+    <p class="hint editor-hint">Bấm chuột vào ô "Sáng"/"Chiều" tương ứng rồi gõ nội dung trực tiếp, giống như đánh máy trong bảng Word. Nhớ bấm "Lưu lịch công tác tuần này" sau khi nhập xong.</p>
+  `;
+
+  els.daysEditor.querySelectorAll(".entry-textarea").forEach((ta) => {
+    autoResizeTextarea(ta);
+    ta.addEventListener("input", () => autoResizeTextarea(ta));
+  });
 }
 
 function collectWeekDataFromForm() {
